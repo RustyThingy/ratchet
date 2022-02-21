@@ -196,7 +196,19 @@ where
     }
 
     let headers = &request.headers;
-    validate_header_value(headers, http::header::CONNECTION, UPGRADE_STR)?;
+    validate_header(headers, http::header::CONNECTION, |name, value| {
+        let mut parts = value.split(|char| char == &b',' || char == &b' ');
+        if parts.any(
+            |part| part.eq_ignore_ascii_case(UPGRADE_STR.as_bytes())
+        ) {
+            Ok(())
+        } else {
+            Err(Error::with_cause(
+                ErrorKind::Http,
+                HttpError::InvalidHeader(name),
+            ))
+        }
+    })?;
     validate_header_value(headers, http::header::UPGRADE, WEBSOCKET_STR)?;
     validate_header_value(
         headers,
